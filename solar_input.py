@@ -18,15 +18,15 @@ def read_space_objects_data_from_file(input_filename):
             obj_type = parts[0].lower()
 
             if obj_type == "star":
-                star = Star()
-                parse_star_parameters(line, star)
-                objects.append(star)
-                current_star = star
+                current_star = Star()
+                parse_star_parameters(parts, current_star)
+                objects.append(current_star)
 
             elif obj_type == "planet" and current_star:
                 planet = Planet()
-                parse_planet_parameters(line, planet)
-                planet.parent_star = current_star  # Жесткая привязка к текущей звезде
+                parse_planet_parameters(parts, planet)
+                planet.parent_star = current_star
+                planet.type = "planet"
                 objects.append(planet)
 
     return objects
@@ -62,19 +62,14 @@ def parse_star_parameters(line, star):
     star.Vy = match[7]
 
 
-def parse_planet_parameters(line, planet):
-    parts = line.split()
+def parse_planet_parameters(parts, planet, star):
     planet.R = int(parts[1])
     planet.color = parts[2]
     planet.m = float(parts[3])
-
-    # Правильное начальное расположение относительно звезды
     planet.x = float(parts[4])
     planet.y = float(parts[5])
-
-    # Начальные скорости должны быть перпендикулярны радиус-вектору
-    planet.Vx = float(parts[6])
-    planet.Vy = float(parts[7])
+    planet.parent_star = star
+    planet.type = "planet"  # Критически важно!
 
 
 def write_space_objects_data_to_file(output_filename, space_objects):

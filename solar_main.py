@@ -7,6 +7,15 @@ from solar_vis import *
 from solar_model import *
 from solar_input import *
 
+
+
+global perform_execution, simulation_paused
+
+
+from math import atan2, cos, sin
+global show_orbits, orbit_button
+show_orbits = True
+orbit_button = None
 perform_execution = False
 """Флаг цикличности выполнения расчёта"""
 
@@ -29,28 +38,66 @@ space_objects = []
 def execution():
     global physical_time
 
-    # Физические расчеты
-    recalculate_space_objects_positions(space_objects, time_step.get())
-    physical_time += time_step.get()
-    displayed_time.set(f"{physical_time:.1f} seconds gone")
+    if not perform_execution:
+        return
 
+    dt = float(time_step.get()) if time_step.get() else 1.0
 
+    # Вращение планет с учетом четности орбит
+    for body in space_objects:
+        if getattr(body, 'type', None) == 'planet' and hasattr(body, 'parent_star'):
+            star = body.parent_star
+            dx = body.x - star.x
+            dy = body.y - star.y
+            r = sqrt(dx ** 2 + dy ** 2)
+
+            if r > 0:
+                # Определяем направление вращения
+                direction = -1 if body.orbit_number % 2 else 1  # -1 для нечетных (CCW), 1 для четных (CW)
+                angular_speed = 0.05 * direction
+
+                # Обновляем угол
+                if not hasattr(body, 'orbit_angle'):
+                    body.orbit_angle = atan2(dy, dx)
+                body.orbit_angle += angular_speed * dt
+
+                # Обновляем позицию
+                body.x = star.x + r * cos(body.orbit_angle)
+                body.y = star.y + r * sin(body.orbit_angle)
+
+                # Обновляем на экране
+                update_planet_position(space, body)
+
+    physical_time += dt
+    displayed_time.set(f"Время: {physical_time:.1f} сек")
 
     if perform_execution:
-        space.after(101 - int(time_speed.get()), execution)
+        space.after(50, execution)
 
 
 def start_execution():
-    """Обработчик события нажатия на кнопку Start.
-    Запускает циклическое исполнение функции execution.
-    """
-    global perform_execution
-    perform_execution = True
-    start_button['text'] = "Pause"
-    start_button['command'] = stop_execution
+    global perform_execution, physical_time
 
-    execution()
-    print('Started execution...')
+    if not perform_execution:
+        perform_execution = True
+        physical_time = 0
+        start_button['text'] = "Pause"
+
+        # Инициализация орбит
+        for star in [obj for obj in space_objects if obj.type == 'star']:
+            planets = [p for p in space_objects if getattr(p, 'parent_star', None) == star]
+            planets.sort(key=lambda p: sqrt((p.x - star.x) ** 2 + (p.y - star.y) ** 2))
+
+            for i, planet in enumerate(planets, 1):
+                planet.orbit_number = i  # Нумерация от 1
+                print(f"Планета {planet.color}: орбита {i} ({'CW' if i % 2 == 0 else 'CCW'})")
+
+        execution()
+    else:
+        perform_execution = False
+        start_button['text'] = "Start"
+
+
 
 
 def stop_execution():
@@ -129,13 +176,10 @@ def main():
     """Главная функция главного модуля.
     Создаёт объекты графического дизайна библиотеки tkinter: окно, холст, фрейм с кнопками, кнопки.
     """
-    global physical_time
-    global displayed_time
-    global time_step
-    global time_speed
-    global space
-    global start_button
-
+    global physical_time, displayed_time, time_step, time_speed, space, start_button, frame, orbit_button
+    global perform_execution, simulation_paused
+    perform_execution = False
+    simulation_paused = False
     print('Modelling started!')
     physical_time = 0
 
@@ -149,6 +193,10 @@ def main():
 
     start_button = tkinter.Button(frame, text="Start", command=start_execution, width=6)
     start_button.pack(side=tkinter.LEFT)
+
+    stop_button = tkinter.Button(frame, text="Stop", command=stop_execution, width=6)
+    stop_button.pack(side=tkinter.LEFT)
+
 
     time_step = tkinter.DoubleVar()
     time_step.set(1)
@@ -168,9 +216,29 @@ def main():
     displayed_time.set(str(physical_time) + " seconds gone")
     time_label = tkinter.Label(frame, textvariable=displayed_time, width=30)
     time_label.pack(side=tkinter.RIGHT)
+    orbit_button = tkinter.Button(frame, text="Hide Orbits", command=toggle_orbits)
+    orbit_button.pack(side=tkinter.LEFT)
 
     root.mainloop()
     print('Modelling finished!')
+
+
+def toggle_orbits():
+    global show_orbits, space, orbit_button
+
+    show_orbits = not show_orbits
+
+    # Переключаем видимость орбит
+    if show_orbits:
+        space.itemconfigure("orbit", state="normal")
+        orbit_button.config(text="Hide Orbits")
+    else:
+        space.itemconfigure("orbit", state="hidden")
+        orbit_button.config(text="Show Orbits")
+def toggle_pause():
+    from solar_model import sim
+    is_paused = sim.toggle_pause()
+    pause_button['text'] = "Resume" if is_paused else "Pause"
 
 if __name__ == "__main__":
     main()

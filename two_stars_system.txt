@@ -1,0 +1,25 @@
+# Система Альфа (золотая звезда)
+Star 60 gold 2.0E30 -600E9 0 0 0
+Planet 15 blue 5.0E24 -500E9 0 0 35E3
+Planet 15 green 5.0E24 -400E9 0 0 30E3
+Planet 15 cyan 5.0E24 -300E9 0 0 25E3
+Planet 15 red 5.0E24 -200E9 0 0 20E3
+Planet 20 orange 5.0E24 -100E9 0 0 15E3
+Planet 18 yellow 5.0E24 0E9 0 0 12E3
+Planet 16 white 5.0E24 100E9 0 0 10E3
+
+# Система Бета (фиолетовая звезда)
+Star 50 purple 3.0E30 600E9 0 0 0
+Planet 12 pink 5.0E24 700E9 0 0 28E3
+Planet 12 gray 5.0E24 800E9 0 0 25E3
+Planet 12 lime 5.0E24 900E9 0 0 22E3
+Planet 12 navy 5.0E24 1000E9 0 0 20E3
+Planet 12 teal 5.0E24 1100E9 0 0 18E3
+Planet 12 gold 5.0E24 1200E9 0 0 16E3
+Planet 12 silver 5.0E24 1300E9 0 0 15E3
+Planet 10 coral 5.0E24 1400E9 0 0 14E3
+Planet 10 olive 5.0E24 1500E9 0 0 13E3
+Planet 10 maroon 5.0E24 1600E9 0 0 12E3
+Planet 10 indigo 5.0E24 1700E9 0 0 11E3
+Planet 10 violet 5.0E24 1800E9 0 0 10E3
+Planet 10 white 5.0E24 1900E9 0 0 9E3
