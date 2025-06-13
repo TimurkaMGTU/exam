@@ -9,6 +9,7 @@ from math import sqrt
 
 star_orbits = {}  # {star_id: [orbit1, orbit2, ...]}
 
+show_orbits = True
 
 header_font = "Arial-16"
 """Шрифт в заголовке"""
@@ -107,21 +108,20 @@ def update_system_name(space, system_name):
 orbit_dict = {}  # Словарь для хранения орбит: {planet_id: orbit_id}
 
 
+
+
 def draw_orbit(space, star, planet):
-    """Рисует идеально круглую орбиту и сохраняет её в словарь star_orbits"""
+    """Рисует орбиту с тегом 'orbit'"""
+    if not show_orbits:
+        return None
+
     a = ((planet.x - star.x) ** 2 + (planet.y - star.y) ** 2) ** 0.5
-    orbit = space.create_oval(
+    return space.create_oval(
         scale_x(star.x - a), scale_y(star.y - a),
         scale_x(star.x + a), scale_y(star.y + a),
-        outline="gray", dash=(2, 2), width=1, tags=("orbit", f"star_{id(star)}")
+        outline="gray", dash=(2, 2), width=1, tags="orbit"
     )
 
-    # Сохраняем орбиту в словарь star_orbits
-    if id(star) not in star_orbits:
-        star_orbits[id(star)] = []
-    star_orbits[id(star)].append(orbit)
-
-    return orbit
 
 def clear_star_orbits(space, star):
     """Удаляет все орбиты, связанные с конкретной звездой"""
@@ -161,27 +161,64 @@ def create_planet_image(space, planet):
     r = planet.R
     planet.image = space.create_oval([x - r, y - r], [x + r, y + r], fill=planet.color)
 
+    # Создаем орбиту при инициализации
     if hasattr(planet, 'parent_star'):
-        draw_orbit(space, planet.parent_star, planet)
+        star = planet.parent_star
+        orbit_r = sqrt((planet.x - star.x) ** 2 + (planet.y - star.y) ** 2)
+        planet.orbit = space.create_oval(
+            scale_x(star.x - orbit_r), scale_y(star.y - orbit_r),
+            scale_x(star.x + orbit_r), scale_y(star.y + orbit_r),
+            outline="gray", dash=(2, 2), tags="orbit"
+        )
+
+
+def update_planet_position(space, planet):
+    x = scale_x(planet.x)
+    y = scale_y(planet.y)
+    r = planet.R
+    space.coords(planet.image, x - r, y - r, x + r, y + r)
+
+    # Обновляем орбиту
+    if hasattr(planet, 'orbit') and hasattr(planet, 'parent_star'):
+        star = planet.parent_star
+        orbit_r = sqrt((planet.x - star.x) ** 2 + (planet.y - star.y) ** 2)
+        space.coords(planet.orbit,
+                     scale_x(star.x - orbit_r), scale_y(star.y - orbit_r),
+                     scale_x(star.x + orbit_r), scale_y(star.y + orbit_r))
+def toggle_orbits(space):
+    """Переключает видимость всех орбит"""
+    global show_orbits
+    show_orbits = not show_orbits
+    if show_orbits:
+        space.itemconfigure("orbit", state="normal")
+    else:
+        space.itemconfigure("orbit", state="hidden")
 
 
 def update_object_position(space, body):
-    """Гарантирует точное положение на орбите"""
-    if hasattr(body, 'parent_star'):
-        star = body.parent_star
-        # Пересчитываем расстояние для идеальной орбиты
-        dx = body.x - star.x
-        dy = body.y - star.y
-        distance = (dx ** 2 + dy ** 2) ** 0.5
-        body.x = star.x + dx / distance * ((star.x - body.x) ** 2 + (star.y - body.y) ** 2) ** 0.5
-        body.y = star.y + dy / distance * ((star.x - body.x) ** 2 + (star.y - body.y) ** 2) ** 0.5
+    """Простое обновление позиции без лишних проверок"""
+    try:
+        x = scale_x(body.x)
+        y = scale_y(body.y)
+        r = body.R
+        space.coords(body.image, x-r, y-r, x+r, y+r)
+    except:
+        pass  # Игнорируем ошибки визуализации
 
-    # Стандартное обновление позиции
-    x = scale_x(body.x)
-    y = scale_y(body.y)
-    r = body.R
-    space.coords(body.image, x - r, y - r, x + r, y + r)
-
-    # Обновляем орбиту
-    if hasattr(body, 'orbit') and hasattr(body, 'parent_star'):
-        update_orbit(space, body.parent_star, body)
+def check_collisions(space_objects):
+    """Проверка столкновений между планетами"""
+    for i, body1 in enumerate(space_objects):
+        if body1.type != 'planet':
+            continue
+        for body2 in space_objects[i+1:]:
+            if body2.type != 'planet':
+                continue
+            dx = body1.x - body2.x
+            dy = body1.y - body2.y
+            distance = sqrt(dx*dx + dy*dy)
+            if distance < (body1.R + body2.R) * 10:  # 10x увеличенная зона столкновения
+                # Корректировка позиции при опасности столкновения
+                body1.x += dx * 0.01
+                body1.y += dy * 0.01
+                body2.x -= dx * 0.01
+                body2.y -= dy * 0.01
